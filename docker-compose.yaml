@@ -1,0 +1,102 @@
+
+x-airflow-common:
+  &airflow-common
+  build: .
+  image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:2.9.3}
+  networks:
+    - etl_network
+  environment:
+    &airflow-common-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+    AIRFLOW__CORE__FERNET_KEY: ''
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    AIRFLOW__SCHEDULER__MIN_FILE_PROCESS_INTERVAL: 10
+    AIRFLOW__CORE__TEST_CONNECTION: enabled
+    AIRFLOW_CORE_ENABLE_XCOM_PICKLING: True
+  volumes:
+    - ./airflow/dags:/opt/airflow/dags
+    - ./airflow/logs:/opt/airflow/logs
+    - ./airflow/plugins:/opt/airflow/plugins
+    - ./airflow/gcp:/opt/airflow/gcp
+    - ./airflow/sql:/opt/airflow/sql
+    - ./de_capstone_project:/opt/airflow/de_capstone_project
+  user: "${AIRFLOW_UID:-50000}:${AIRFLOW_GID:-50000}"
+  depends_on:
+    postgres:
+      condition: service_started  # 'service_healthy' is deprecated in v3. Use 'service_started' or ensure healthchecks are appropriately handled.
+
+services:
+  source_postgres:
+    image: postgres:15
+    ports:
+      - '5433:5432'
+    networks:
+      - etl_network
+    environment:
+      POSTGRES_DB: ecommerce
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+    volumes:
+      - ./source_db:/docker-entrypoint-initdb.d
+    restart: always  # Ensure this service restarts automatically on failure
+
+  postgres:
+    image: postgres:15
+    networks:
+      - etl_network
+      
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres-db-volume:/var/lib/postgresql/data
+    ports:
+      - '5432:5432'
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 5s
+      retries: 5
+    restart: always
+
+  airflow-webserver:
+    <<: *airflow-common
+    command: webserver
+    networks:
+      - etl_network
+    ports:
+      - '8080:8080'
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    restart: always
+
+  airflow-scheduler:
+    <<: *airflow-common
+    networks:
+      - etl_network
+    command: scheduler
+    restart: always
+
+  airflow-init:
+    <<: *airflow-common
+    command: version
+    networks:
+      - etl_network
+    environment:
+      <<: *airflow-common-env
+      _AIRFLOW_DB_UPGRADE: 'true'
+      _AIRFLOW_WWW_USER_CREATE: 'true'
+      _AIRFLOW_WWW_USER_USERNAME: ${_AIRFLOW_WWW_USER_USERNAME:-airflow}
+      _AIRFLOW_WWW_USER_PASSWORD: ${_AIRFLOW_WWW_USER_PASSWORD:-airflow}
+
+volumes:
+  postgres-db-volume:
+
+networks:
+  etl_network:
+    driver: bridge
