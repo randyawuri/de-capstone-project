@@ -1,0 +1,25 @@
+# profiles.yml
+
+
+de_capstone_project:
+  target: test
+  outputs:
+    dev:
+      type: bigquery
+      method: service-account
+      project: de-capstone-project-432408
+      dataset: olist_ecommerce_store
+      threads: 4 # Must be a value of 1 or greater
+      keyfile: /opt/airflow/gcp/service_account.json
+      OPTIONAL_CONFIG: VALUE
+      
+  target: dev
+  outputs:
+    dev:
+      type: bigquery
+      method: service-account
+      project: de-capstone-project-432408
+      dataset: olist_ecommerce_store
+      threads: 4 # Must be a value of 1 or greater
+      keyfile: /opt/airflow/gcp/service_account.json
+      OPTIONAL_CONFIG: VALUE

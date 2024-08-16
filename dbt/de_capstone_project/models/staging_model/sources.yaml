@@ -1,0 +1,9 @@
+version: 2
+
+sources:
+  - name: olist_ecommerce_store
+    tables:
+      - name: orders
+      - name: products
+      - name: order_items
+      - name: customers

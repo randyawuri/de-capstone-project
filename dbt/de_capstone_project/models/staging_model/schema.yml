@@ -1,0 +1,37 @@
+version: 2
+
+models:
+  - name: stg_orders
+    description: "The primary key for orders data."
+    columns:
+      - name: order_id
+        tests:
+          - unique
+          - not_null
+      - name: customer_id
+
+  - name: stg_products
+    description: "The primary key for products data."
+    columns:
+      - name: product_id
+        tests:
+          - unique
+          - not_null
+
+
+  - name: stg_order_items
+    description: "The primary key for order items data."
+    columns:
+      - name: order_item_id
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_customers
+    description: "The primary key for customers data."
+    columns:
+      - name: customer_id
+        tests:
+          - unique
+          - not_null
+
